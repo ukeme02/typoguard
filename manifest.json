@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "TypoGuard",
+  "version": "0.1.0",
+  "description": "Privacy-first browser extension for recovering long-form text after accidental loss.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

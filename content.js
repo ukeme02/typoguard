@@ -1,0 +1,1 @@
+console.log("TypoGuard: content script loaded.");
