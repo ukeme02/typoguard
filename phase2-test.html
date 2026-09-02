@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TypoGuard Phase 2 Test</title>
+</head>
+<body>
+
+  <h1>TypoGuard Editor Discovery Test</h1>
+
+  <label for="test-textarea">Textarea</label>
+  <textarea
+    id="test-textarea"
+    rows="8"
+    cols="60"
+    placeholder="Type something here..."
+  ></textarea>
+
+  <br><br>
+
+  <label>Contenteditable</label>
+
+  <div
+    id="test-editor"
+    contenteditable="true"
+    style="width: 500px; height: 150px; border: 1px solid black;"
+  ></div>
+  <br><br>
+
+  <label>Disabled textarea (should NOT be detected)</label>
+  <textarea disabled rows="4" cols="60"></textarea>
+
+  <br><br>
+
+  <label>Readonly textarea (should NOT be detected)</label>
+  <textarea readonly rows="4" cols="60"></textarea>
+
+  <br><br>
+
+  <label>Hidden editor (should NOT be detected)</label>
+  <div contenteditable="true" style="display:none;"></div>
+
+</body>
+</html>
