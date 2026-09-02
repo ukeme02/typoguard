@@ -126,3 +126,88 @@ function describeEditor(element) {
     type
   };
 }
+/**
+ * TypoGuard — Dynamic Editor Detection
+ *
+ * Phase 2.4
+ *
+ * Watches for editors added to or removed from the DOM
+ * after initial page load.
+ *
+ * IMPORTANT:
+ * Still does NOT:
+ * - capture text
+ * - store text
+ * - listen for typing
+ * - communicate with a server
+ */
+
+/**
+ * Check whether a node (or its subtree) is or contains
+ * a supported editor.
+ *
+ * @param {Node} node
+ * @returns {boolean}
+ */
+function containsEditor(node) {
+  if (!(node instanceof Element)) {
+    return false;
+  }
+
+  if (node.matches(SUPPORTED_EDITOR_SELECTOR)) {
+    return true;
+  }
+
+  return node.querySelector(SUPPORTED_EDITOR_SELECTOR) !== null;
+}
+
+/**
+ * Handle a DOM mutation by re-scanning for editors.
+ *
+ * For Phase 2 we re-run the full discovery. This is simple
+ * and correct; optimization (incremental scanning) comes
+ * later, once the registry exists.
+ *
+ * @param {MutationRecord[]} mutations
+ */
+function handleMutations(mutations) {
+  let relevantChange = false;
+
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (containsEditor(node)) {
+        relevantChange = true;
+      }
+    }
+
+    for (const node of mutation.removedNodes) {
+      if (containsEditor(node)) {
+        relevantChange = true;
+      }
+    }
+  }
+
+  if (relevantChange) {
+    const editors = discoverEditors()
+      .map(describeEditor)
+      .filter(Boolean);
+
+    console.log(
+      "TypoGuard: editors re-discovered after DOM change:",
+      editors
+    );
+  }
+}
+
+/**
+ * Start watching the document for dynamically
+ * added or removed editors.
+ */
+function startEditorObserver() {
+  const observer = new MutationObserver(handleMutations);
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+}

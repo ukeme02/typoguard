@@ -39,6 +39,28 @@
 
   <label>Hidden editor (should NOT be detected)</label>
   <div contenteditable="true" style="display:none;"></div>
+  <br><br>
+
+  <button id="add-editor-btn">Add editor dynamically</button>
+  <div id="dynamic-editor-host"></div>
+
+  <script>
+    document
+      .getElementById("add-editor-btn")
+      .addEventListener("click", function () {
+        const host =
+          document.getElementById("dynamic-editor-host");
+
+        const newEditor =
+          document.createElement("textarea");
+
+        newEditor.id = "dynamic-textarea";
+        newEditor.rows = 4;
+        newEditor.cols = 60;
+
+        host.appendChild(newEditor);
+      });
+  </script>
 
 </body>
 </html>
