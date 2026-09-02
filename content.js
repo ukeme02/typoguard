@@ -1,14 +1,17 @@
 console.log("TypoGuard: content script loaded.");
 
-const initialEditors = discoverEditors()
-  .map(describeEditor)
-  .filter(Boolean);
+const initialEditors = registerAllEditors();
 
 console.log(
-  "TypoGuard: initial editor descriptions:",
-  initialEditors
+  "TypoGuard: registry initialized:",
+  initialEditors.map(function (r) { return r.id + " (" + r.type + ")"; })
 );
 
 startEditorObserver();
 
 console.log("TypoGuard: editor observer started.");
+
+console.log(
+  "TypoGuard: registry size:",
+  editorRegistry.size
+);

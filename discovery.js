@@ -1,10 +1,11 @@
 /**
- * TypoGuard — Editor Discovery
+ * TypoGuard — Editor Discovery & Registry
  *
- * Phase 2.3
+ * Phase 2.5
  *
  * Responsibility:
- * Detect, identify, and validate supported editing surfaces.
+ * Detect, identify, validate, and register supported
+ * editing surfaces. Maintain a registry of live editors.
  *
  * IMPORTANT:
  * This module does NOT:
@@ -18,6 +19,15 @@ const SUPPORTED_EDITOR_SELECTOR = [
   "textarea",
   '[contenteditable="true"]'
 ].join(",");
+
+/**
+ * The editor registry.
+ * Key: Element
+ * Value: editor record
+ */
+const editorRegistry = new Map();
+
+let nextEditorId = 1;
 
 /**
  * Determine the type of supported editor.
@@ -42,26 +52,21 @@ function getEditorType(element) {
 
 /**
  * Check whether an editor is usable by the user.
- * An editor that is disabled, hidden, or collapsed
- * is not worth registering.
  *
  * @param {Element} element
  * @returns {boolean}
  */
 function isEditorUsable(element) {
-  // Textarea-specific states
   if (element instanceof HTMLTextAreaElement) {
     if (element.disabled || element.readOnly) {
       return false;
     }
   }
 
-  // Hidden via the standard attribute
   if (element.hidden) {
     return false;
   }
 
-  // Check visibility up the ancestor chain
   let node = element;
 
   while (node instanceof Element) {
@@ -82,7 +87,6 @@ function isEditorUsable(element) {
     node = node.parentElement;
   }
 
-  // Collapsed to zero size
   const rect = element.getBoundingClientRect();
 
   if (rect.width === 0 || rect.height === 0) {
@@ -104,13 +108,18 @@ function discoverEditors() {
 }
 
 /**
- * Convert a DOM element into a TypoGuard editor descriptor.
- * Returns null for elements that are not usable editors.
+ * Register an element in the editor registry.
+ * Returns the editor record, or null if the element
+ * is not a usable editor or is already registered.
  *
  * @param {Element} element
  * @returns {Object|null}
  */
-function describeEditor(element) {
+function registerEditor(element) {
+  if (editorRegistry.has(element)) {
+    return null; // duplicate — already registered
+  }
+
   const type = getEditorType(element);
 
   if (!type) {
@@ -121,52 +130,70 @@ function describeEditor(element) {
     return null;
   }
 
-  return {
+  const record = {
+    id: "tg-editor-" + nextEditorId,
     element,
-    type
+    type,
+    registeredAt: Date.now()
   };
-}
-/**
- * TypoGuard — Dynamic Editor Detection
- *
- * Phase 2.4
- *
- * Watches for editors added to or removed from the DOM
- * after initial page load.
- *
- * IMPORTANT:
- * Still does NOT:
- * - capture text
- * - store text
- * - listen for typing
- * - communicate with a server
- */
 
-/**
- * Check whether a node (or its subtree) is or contains
- * a supported editor.
- *
- * @param {Node} node
- * @returns {boolean}
- */
-function containsEditor(node) {
-  if (!(node instanceof Element)) {
-    return false;
-  }
+  nextEditorId++;
 
-  if (node.matches(SUPPORTED_EDITOR_SELECTOR)) {
-    return true;
-  }
+  editorRegistry.set(element, record);
 
-  return node.querySelector(SUPPORTED_EDITOR_SELECTOR) !== null;
+  return record;
 }
 
 /**
- * Handle a DOM mutation by re-scanning for editors.
+ * Register all currently present editors.
  *
- * For Phase 2 we re-run the full discovery. This is simple
- * and correct; optimization (incremental scanning) comes
- * later, once the registry exists.
+ * @returns {Object[]} newly registered editor records
+ */
+function registerAllEditors() {
+  const newlyRegistered = [];
+
+  for (const element of discoverEditors()) {
+    const record = registerEditor(element);
+
+    if (record) {
+      newlyRegistered.push(record);
+    }
+  }
+
+  return newlyRegistered;
+}
+
+/**
+ * Deregister editors that are no longer in the document.
+ *
+ * @returns {Object[]} removed editor records
+ */
+function deregisterRemovedEditors() {
+  const removed = [];
+
+  for (const [element, record] of editorRegistry) {
+    if (!document.contains(element)) {
+      editorRegistry.delete(element);
+      removed.push(record);
+    }
+  }
+
+  return removed;
+}
+
+/**
+ * Get the registry record for an element.
+ *
+ * @param {Element} element
+ * @returns {Object|undefined}
+ */
+function getEditorRecord(element) {
+  return editorRegistry.get(element);
+}
+
+/**
+ * Handle a DOM mutation by syncing the registry
+ * with the current DOM.
  *
  * @param {MutationRecord[]} mutations
  */
@@ -188,15 +215,42 @@ function handleMutations(mutations) {
   }
 
   if (relevantChange) {
-    const editors = discoverEditors()
-      .map(describeEditor)
-      .filter(Boolean);
+    const added = registerAllEditors();
+    const removed = deregisterRemovedEditors();
 
-    console.log(
-      "TypoGuard: editors re-discovered after DOM change:",
-      editors
-    );
+    if (added.length > 0) {
+      console.log(
+        "TypoGuard: editors registered:",
+        added.map(function (r) { return r.id + " (" + r.type + ")"; })
+      );
+    }
+
+    if (removed.length > 0) {
+      console.log(
+        "TypoGuard: editors deregistered:",
+        removed.map(function (r) { return r.id + " (" + r.type + ")"; })
+      );
+    }
   }
+}
+
+/**
+ * Check whether a node (or its subtree) is or contains
+ * a supported editor.
+ *
+ * @param {Node} node
+ * @returns {boolean}
+ */
+function containsEditor(node) {
+  if (!(node instanceof Element)) {
+    return false;
+  }
+
+  if (node.matches(SUPPORTED_EDITOR_SELECTOR)) {
+    return true;
+  }
+
+  return node.querySelector(SUPPORTED_EDITOR_SELECTOR) !== null;
 }
 
 /**

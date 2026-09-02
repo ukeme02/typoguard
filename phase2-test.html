@@ -61,6 +61,20 @@
         host.appendChild(newEditor);
       });
   </script>
+  <button id="remove-editor-btn">Remove last dynamic editor</button>
+
+  <script>
+    document
+      .getElementById("remove-editor-btn")
+      .addEventListener("click", function () {
+        const host =
+          document.getElementById("dynamic-editor-host");
+
+        if (host.lastElementChild) {
+          host.removeChild(host.lastElementChild);
+        }
+      });
+  </script>
 
 </body>
 </html>
