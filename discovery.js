@@ -17,7 +17,7 @@
 
 const SUPPORTED_EDITOR_SELECTOR = [
   "textarea",
-  '[contenteditable="true"]'
+  "[contenteditable]"
 ].join(",");
 
 /**
@@ -40,10 +40,7 @@ function getEditorType(element) {
     return "textarea";
   }
 
-  if (
-    element instanceof HTMLElement &&
-    element.getAttribute("contenteditable") === "true"
-  ) {
+  if (element instanceof HTMLElement && element.isContentEditable) {
     return "contenteditable";
   }
 
@@ -264,4 +261,29 @@ function startEditorObserver() {
     childList: true,
     subtree: true
   });
+}
+
+
+/**
+ * TypoGuard — Debug Utilities
+ *
+ * Internal diagnostics only. Not part of user-facing behavior.
+ * Never exposes text content — only registry metadata.
+ */
+
+function typoGuardDebug() {
+  const records = Array.from(editorRegistry.values());
+
+  return {
+    registrySize: editorRegistry.size,
+    nextId: nextEditorId,
+    editors: records.map(function (r) {
+      return {
+        id: r.id,
+        type: r.type,
+        connected: document.contains(r.element),
+        tagName: r.element.tagName.toLowerCase()
+      };
+    })
+  };
 }
