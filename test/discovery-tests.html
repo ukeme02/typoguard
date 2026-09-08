@@ -5,6 +5,7 @@
   <title>TypoGuard Discovery Tests</title>
 </head>
 <body>
+  <div id="test-results"></div>
   <!-- Part A: fixture elements -->
   <textarea id="fx-textarea"></textarea>
   <div id="fx-ce-true" contenteditable="true"></div>
@@ -27,12 +28,19 @@
     const total = 7;
 
     function assert(name, condition) {
+      const resultsDiv = document.getElementById('test-results');
+      const line = document.createElement('div');
       if (condition) {
         console.log(`PASS: ${name}`);
         passed++;
+        line.textContent = `${name} … PASS`;
+        line.style.color = 'green';
       } else {
         console.log(`FAIL: ${name}`);
+        line.textContent = `${name} … FAIL`;
+        line.style.color = 'red';
       }
+      resultsDiv.appendChild(line);
     }
 
     // Helper to get registry snapshot
@@ -99,7 +107,11 @@
             assert('A6', ok);
 
             // Final summary
-            console.log(`${passed}/${total} assertions passed`);
+            const summary = document.createElement('div');
+            summary.textContent = `${passed}/${total} assertions passed`;
+            summary.style.fontWeight = 'bold';
+            document.getElementById('test-results').appendChild(summary);
+
           }, 50);
         }, 50);
       }, 50);
