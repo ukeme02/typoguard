@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>TypoGuard Discovery Tests</title>
+</head>
+<body>
+  <!-- Part A: fixture elements -->
+  <textarea id="fx-textarea"></textarea>
+  <div id="fx-ce-true" contenteditable="true"></div>
+  <div id="fx-ce-empty" contenteditable=""></div>
+  <div id="fx-ce-bare" contenteditable></div>
+  <div id="fx-ce-plaintext" contenteditable="plaintext-only"></div>
+  <div id="fx-ce-false" contenteditable="false"></div>
+  <div id="fx-ce-banana" contenteditable="banana"></div>
+  <textarea id="fx-hidden" style="display:none"></textarea>
+  <textarea id="fx-disabled" disabled></textarea>
+  <textarea id="fx-readonly" readonly></textarea>
+  <script src="../discovery.js"></script>
+  <script>
+    // Ensure discovery.js has run its initial registration via calling registerAllEditors
+    // and start the observer to catch dynamic changes.
+    registerAllEditors();
+    startEditorObserver();
+
+    let passed = 0;
+    const total = 6;
+
+    function assert(name, condition) {
+      if (condition) {
+        console.log(`PASS: ${name}`);
+        passed++;
+      } else {
+        console.log(`FAIL: ${name}`);
+      }
+    }
+
+    // Helper to get registry snapshot
+    function getRegistryInfo() {
+      const debug = typoGuardDebug();
+      return {
+        size: debug.registrySize,
+        ids: new Set(debug.editors.map(e => e.domId).filter(id => id !== null))
+      };
+    }
+
+    // Wait a bit for any microtasks
+    setTimeout(() => {
+      const info = getRegistryInfo();
+
+      // A1: registrySize is exactly 5
+      assert('A1', info.size === 5);
+
+      // A2: the registered domIds are exactly {fx-textarea, fx-ce-true, fx-ce-empty, fx-ce-bare, fx-ce-plaintext}
+      const expectedIds = new Set(['fx-textarea', 'fx-ce-true', 'fx-ce-empty', 'fx-ce-bare', 'fx-ce-plaintext']);
+      assert('A2',
+        info.ids.size === expectedIds.size &&
+        [...info.ids].every(id => expectedIds.has(id)) &&
+        [...expectedIds].every(id => info.ids.has(id))
+      );
+
+      // A3: none of {fx-ce-false, fx-ce-banana, fx-hidden, fx-disabled, fx-readonly} are registered
+      const forbidden = new Set(['fx-ce-false', 'fx-ce-banana', 'fx-hidden', 'fx-disabled', 'fx-readonly']);
+      assert('A3',
+        [...info.ids].every(id => !forbidden.has(id))
+      );
+
+      // Dynamic tests
+      // A4: append a new <textarea> with id fx-dyn-1 → registrySize becomes 6 and fx-dyn-1 is registered; then remove it → registrySize returns to 5
+      const dyn1 = document.createElement('textarea');
+      dyn1.id = 'fx-dyn-1';
+      document.body.appendChild(dyn1);
+      setTimeout(() => {
+        const info4 = getRegistryInfo();
+        assert('A4a', info4.size === 6 && info4.ids.has('fx-dyn-1'));
+        // Remove it
+        document.body.removeChild(dyn1);
+        setTimeout(() => {
+          const info4b = getRegistryInfo();
+          assert('A4b', info4b.size === 5 && !info4b.ids.has('fx-dyn-1'));
+
+          // A5: append a div with contenteditable="false" (id fx-dyn-false) → registrySize STAYS 5
+          const dynFalse = document.createElement('div');
+          dynFalse.id = 'fx-dyn-false';
+          dynFalse.setAttribute('contenteditable', 'false');
+          document.body.appendChild(dynFalse);
+          setTimeout(() => {
+            const info5 = getRegistryInfo();
+            assert('A5', info5.size === 5 && !info5.ids.has('fx-dyn-false'));
+            document.body.removeChild(dynFalse);
+
+            // A6: privacy — assert every entry returned by typoGuardDebug() has keys only within {id, domId, type, tagName, connected}; no value, no text content
+            const debugFinal = typoGuardDebug();
+            const validKeys = new Set(['id', 'domId', 'type', 'tagName', 'connected']);
+            const ok = debugFinal.editors.every(entry => {
+              const keys = Object.keys(entry);
+              return keys.every(k => validKeys.has(k));
+            });
+            assert('A6', ok);
+
+            // Final summary
+            console.log(`${passed}/${total} assertions passed`);
+          }, 50);
+        }, 50);
+      }, 50);
+    }, 50);
+  </script>
+</body>
+</html>

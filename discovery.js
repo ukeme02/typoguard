@@ -282,7 +282,8 @@ function typoGuardDebug() {
         id: r.id,
         type: r.type,
         connected: document.contains(r.element),
-        tagName: r.element.tagName.toLowerCase()
+        tagName: r.element.tagName.toLowerCase(),
+        domId: r.element.id || null
       };
     })
   };
