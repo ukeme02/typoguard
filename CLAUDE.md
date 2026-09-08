@@ -71,3 +71,13 @@ Refer to `docs/ARCHITECTURE.md` for the detailed phase roadmap and acceptance cr
 - All processing occurs locally; no data leaves the browser.
 - Only editor metadata (ID, type, timestamp) is stored—never user text content.
 - Sensitive fields (e.g., password inputs) are implicitly excluded by focusing only on textarea and contenteditable editors.
+
+
+## Safety Rules
+
+These rules override convenience and must be followed in all interactions with this repository:
+
+1. **Never modify, revert, or delete any file or code beyond the explicit scope of the user's request.**
+2. **Never discard working-tree changes with `git checkout --`, `git restore`, or `git clean`. If changes must be set aside, use `git stash` so they remain recoverable.**
+3. **If code looks accidental or unintended, ask the user before touching it. A previous session's work is invisible to you and may be deliberate.**
+4. **Destructive operations (deletion, reverts, force-push) require explicit user approval in the same turn they happen.**
