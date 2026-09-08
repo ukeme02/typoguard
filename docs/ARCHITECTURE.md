@@ -55,10 +55,15 @@ Phase 0 — Project Setup & Repository
 Phase 1 — Manifest & Extension Skeleton
 25The repository is operational, Chrome accepts the extension, the content script executes, and GitHub is
 synchronized.
-🟡 Immediate Next
-Phase 2 — Editor Discovery
+🟢 Phase 2 — Editor Discovery — COMPLETE (verified via manual verification + discovery-tests.html)
+Phase 3 — Capture Engine — Next
 ⏳ Remaining
-Phases 3–15
+Phases 4–15
 All remaining functionality is currently planned but not yet implemented.
+
+## Deferred Items / Backlog
+- Visibility edge-case filtering (revisit Phase 8)
+- Mutation rescan performance (Phase 8)
+- Stable editor IDs across DOM moves (Phase 3)
 
 ---
