@@ -164,7 +164,14 @@ function registerEditor(element) {
   editorRegistry.set(element, record);
 
   // Invoke registered listeners with the editor record
-  editorEventListeners.registered.forEach(cb => cb(record));
+  // Wrap each listener in try/catch to prevent one listener's error from aborting others
+  editorEventListeners.registered.forEach(cb => {
+    try {
+      cb(record);
+    } catch (error) {
+      console.error(`TypoGuard: listener error (registered): ${error.message}`);
+    }
+  });
 
   return record;
 }
@@ -202,7 +209,14 @@ function deregisterRemovedEditors() {
       removed.push(record);
 
       // Invoke deregistered listeners with the record
-      editorEventListeners.deregistered.forEach(cb => cb(record));
+      // Wrap each listener in try/catch to prevent one listener's error from aborting others
+      editorEventListeners.deregistered.forEach(cb => {
+        try {
+          cb(record);
+        } catch (error) {
+          console.error(`TypoGuard: listener error (deregistered): ${error.message}`);
+        }
+      });
     }
   }
 
