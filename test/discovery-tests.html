@@ -25,7 +25,7 @@
     startEditorObserver();
 
     let passed = 0;
-    const total = 7;
+    const total = 10; // Updated to reflect new assertions
 
     function assert(name, condition) {
       const resultsDiv = document.getElementById('test-results');
@@ -106,12 +106,75 @@
             });
             assert('A6', ok);
 
-            // Final summary
-            const summary = document.createElement('div');
-            summary.textContent = `${passed}/${total} assertions passed`;
-            summary.style.fontWeight = 'bold';
-            document.getElementById('test-results').appendChild(summary);
+            // A7: subscribe to "registered", dynamically add a textarea → callback fires with a record containing an id
+            let registeredFired = false;
+            const unsubscribeRegister = onEditorsChanged('registered', (record) => {
+              registeredFired = true;
+              // We can also check that record has an id
+              if (!record.id) {
+                throw new Error('Record missing id');
+              }
+            });
+            const dyn7 = document.createElement('textarea');
+            dyn7.id = 'fx-dyn-7';
+            document.body.appendChild(dyn7);
+            setTimeout(() => {
+              assert('A7', registeredFired);
+              // Clean up
+              document.body.removeChild(dyn7);
+              unsubscribeRegister(); // clean up subscription
 
+              // A8: subscribe to "deregistered", remove that editor → callback fires
+              let deregisteredFired = false;
+              const unsubscribeDeregister = onEditorsChanged('deregistered', (record) => {
+                deregisteredFired = true;
+                // Check record has an id
+                if (!record.id) {
+                  throw new Error('Record missing id');
+                }
+              });
+              const dyn8 = document.createElement('textarea');
+              dyn8.id = 'fx-dyn-8';
+              document.body.appendChild(dyn8);
+              setTimeout(() => {
+                // Now remove it
+                document.body.removeChild(dyn8);
+                setTimeout(() => {
+                  assert('A8', deregisteredFired);
+                  unsubscribeDeregister(); // clean up
+
+                  // A9: the unsubscribe function works — after unsubscribing, further add/remove triggers no callback
+                  let registeredFired9 = false;
+                  let deregisteredFired9 = false;
+                  const unsubscribeRegister9 = onEditorsChanged('registered', (record) => { registeredFired9 = true; });
+                  const unsubscribeDeregister9 = onEditorsChanged('deregistered', (record) => { deregisteredFired9 = true; });
+                  // Unsubscribe immediately
+                  unsubscribeRegister9();
+                  unsubscribeDeregister9();
+                  // Now add and remove an editor
+                  const dyn9 = document.createElement('textarea');
+                  dyn9.id = 'fx-dyn-9';
+                  document.body.appendChild(dyn9);
+                  setTimeout(() => {
+                    document.body.removeChild(dyn9);
+                    setTimeout(() => {
+                      assert('A9', !registeredFired9 && !deregisteredFired9);
+                      // Clean up subscriptions (though we already unsubscribed, but to be safe)
+                      // Actually, we already unsubscribed above, so these are no-ops
+                      // unsubscribeRegister9();
+                      // unsubscribeDeregister9();
+
+                      // Final summary
+                      const summary = document.createElement('div');
+                      summary.textContent = `${passed}/${total} assertions passed`;
+                      summary.style.fontWeight = 'bold';
+                      document.getElementById('test-results').appendChild(summary);
+
+                    }, 50);
+                  }, 50);
+                }, 50);
+              }, 50);
+            }, 50);
           }, 50);
         }, 50);
       }, 50);

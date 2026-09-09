@@ -29,6 +29,31 @@ const editorRegistry = new Map();
 
 let nextEditorId = 1;
 
+// Event listener system for editor registration/deregistration
+const editorEventListeners = {
+  registered: [],
+  deregistered: []
+};
+
+/**
+ * Subscribe to editor registration or deregistration events.
+ * @param {"registered"|"deregistered"} eventType - The type of event to listen for
+ * @param {Function} callback - Function to call with the editor record when event occurs
+ * @returns {Function} Unsubscribe function to remove the listener
+ */
+function onEditorsChanged(eventType, callback) {
+  if (!['registered', 'deregistered'].includes(eventType)) {
+    throw new Error('eventType must be "registered" or "deregistered"');
+  }
+  editorEventListeners[eventType].push(callback);
+  return function () {
+    const index = editorEventListeners[eventType].indexOf(callback);
+    if (index > -1) {
+      editorEventListeners[eventType].splice(index, 1);
+    }
+  };
+}
+
 /**
  * Determine the type of supported editor.
  *
@@ -138,6 +163,9 @@ function registerEditor(element) {
 
   editorRegistry.set(element, record);
 
+  // Invoke registered listeners with the editor record
+  editorEventListeners.registered.forEach(cb => cb(record));
+
   return record;
 }
 
@@ -172,6 +200,9 @@ function deregisterRemovedEditors() {
     if (!document.contains(element)) {
       editorRegistry.delete(element);
       removed.push(record);
+
+      // Invoke deregistered listeners with the record
+      editorEventListeners.deregistered.forEach(cb => cb(record));
     }
   }
 
