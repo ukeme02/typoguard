@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TypoGuard Capture Engine Tests</title>
+</head>
+<body>
+<div id="test-results" style="font-family: monospace; font-size: 14px; padding: 12px; border: 2px solid #333; margin: 12px; max-width: 720px;">
+  <strong>TypoGuard Capture Engine — Test Results</strong>
+</div>
+
+<textarea id="fx-textarea" placeholder="textarea fixture"></textarea>
+<div id="fx-ce" contenteditable="true" style="border: 1px solid #999; min-height: 30px; margin: 8px 0;">contenteditable fixture</div>
+<textarea id="fx-hidden" style="display: none"></textarea>
+<textarea id="fx-disabled" disabled></textarea>
+
+<script src="../discovery.js"></script>
+<script src="../capture.js"></script>
+<script>
+(function () {
+  const panel = document.getElementById('test-results');
+  let passed = 0, failed = 0, total = 0;
+
+  function report(name, ok, detail) {
+    total++;
+    if (ok) { passed++; } else { failed++; }
+    const line = document.createElement('div');
+    line.style.color = ok ? 'green' : 'red';
+    line.textContent = name + ' … ' + (ok ? 'PASS' : 'FAIL' + (detail ? ': ' + detail : ''));
+    panel.appendChild(line);
+    (ok ? console.log : console.error)('CAPTURE-TEST ' + line.textContent);
+  }
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+  async function test(name, fn) {
+    try { await fn(); } catch (e) { report(name, false, e && e.message); }
+  }
+  function fire(el, type) { el.dispatchEvent(new Event(type, { bubbles: true })); }
+  function seqWatermark(caps) { return caps.length ? caps[caps.length - 1].sequence : 0; }
+
+  onEditorsChanged('registered', (rec) => window.typoGuardCaptureEngine.initEditorCapture(rec));
+  onEditorsChanged('deregistered', (rec) => window.typoGuardCaptureEngine.destroyEditorCapture(rec));
+  registerAllEditors();
+  startEditorObserver();
+
+  const engine = window.typoGuardCaptureEngine;
+  const ta = document.getElementById('fx-textarea');
+  const ce = document.getElementById('fx-ce');
+  const rec = editorRegistry.get(ta);
+
+  (async function run() {
+
+    await test('B0 engine API surface', async () => {
+      const ok = !!engine
+        && typeof engine.initEditorCapture === 'function'
+        && typeof engine.getCapturesForEditor === 'function'
+        && typeof engine.clearAllCaptures === 'function';
+      report('B0 engine API surface', ok);
+    });
+
+    await test('B1 idle debounce captures typed text', async () => {
+      ta.value = 'hello capture';
+      fire(ta, 'input');
+      await wait(1400);
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      const last = caps[caps.length - 1];
+      report('B1 idle debounce captures typed text', !!last && last.text === 'hello capture', 'count=' + caps.length);
+    });
+
+    await test('B2 entry shape + metadata', async () => {
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      const last = caps[caps.length - 1];
+      const keys = Object.keys(last).sort().join(',');
+      report('B2 entry shape', keys === 'editorType,pageUrl,sequence,text,timestamp', keys);
+      report('B14 pageUrl + editorType', last.pageUrl.indexOf('capture-tests.html') !== -1 && last.editorType === 'textarea');
+    });
+
+    await test('B3 sequence monotonic', async () => {
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      let ok = caps.length >= 1;
+      for (let i = 1; i < caps.length; i++) if (caps[i].sequence <= caps[i - 1].sequence) ok = false;
+      report('B3 sequence monotonic', ok);
+    });
+
+    await test('B4 unregistered fixtures excluded', async () => {
+      const dbg = typoGuardDebug();
+      report('B4 unregistered editors excluded', dbg.registrySize === 2, 'registrySize=' + dbg.registrySize);
+    });
+
+    await test('B5 blur captures immediately, no double', async () => {
+      ta.value = 'blur test';
+      fire(ta, 'input');
+      const before = (engine.getCapturesForEditor(rec.id) || []).length;
+      fire(ta, 'blur');
+      const after = (engine.getCapturesForEditor(rec.id) || []).length;
+      report('B5 blur captures immediately', after === before + 1, before + '->' + after);
+      await wait(1500);
+      const after2 = (engine.getCapturesForEditor(rec.id) || []).length;
+      report('B5b no double-capture after blur', after2 === after, after + '->' + after2);
+    });
+
+    await test('B6 contenteditable captured via innerText', async () => {
+      ce.innerText = 'ce line1\nline2';
+      fire(ce, 'input');
+      await wait(1400);
+      const ceRec = editorRegistry.get(ce);
+      const caps = ceRec ? (engine.getCapturesForEditor(ceRec.id) || []) : [];
+      const last = caps[caps.length - 1];
+      report('B6 contenteditable captured via innerText', !!last && last.text.indexOf('line2') !== -1 && last.editorType === 'contenteditable', JSON.stringify(last && last.text));
+    });
+
+    await test('B7 char limit 10000', async () => {
+      ta.value = 'x'.repeat(15000);
+      fire(ta, 'input');
+      fire(ta, 'blur');
+      await wait(1300);
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      const last = caps[caps.length - 1];
+      report('B7 char limit 10000', !!last && last.text.length === 10000, 'len=' + (last && last.text.length));
+    });
+
+    await test('B8 buffer pruned to 50', async () => {
+      for (let i = 0; i < 55; i++) performCapture(rec);
+      const pruned = engine.getCapturesForEditor(rec.id) || [];
+      report('B8 buffer pruned to 50', pruned.length === 50, 'len=' + pruned.length);
+    });
+
+    await test('B9 sequence monotonic after prune', async () => {
+      const pruned = engine.getCapturesForEditor(rec.id) || [];
+      let ok = pruned.length >= 2;
+      for (let i = 1; i < pruned.length; i++) if (pruned[i].sequence <= pruned[i - 1].sequence) ok = false;
+      report('B9 sequence monotonic after prune', ok);
+    });
+
+    await test('B10 destroy preserves buffer', async () => {
+      engine.destroyEditorCapture(rec);
+      const preserved = engine.getCapturesForEditor(rec.id) || [];
+      report('B10 destroy preserves buffer', preserved.length === 50, 'len=' + preserved.length);
+    });
+
+    await test('B11 re-init captures again (by existence, not length)', async () => {
+      engine.initEditorCapture(rec);
+      const beforeSeq = seqWatermark(engine.getCapturesForEditor(rec.id) || []);
+      ta.value = 'after reinit';
+      fire(ta, 'input');
+      await wait(1400);
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      const idx = caps.findIndex(c => c.text === 'after reinit' && c.sequence > beforeSeq);
+      report('B11 re-init captures again', idx !== -1, 'watermark ' + beforeSeq + ', found at idx ' + idx);
+      report('B12 sequence continuous across re-init', idx > 0 && caps[idx].sequence > caps[idx - 1].sequence, 'seq ' + (caps[idx - 1] && caps[idx - 1].sequence) + '->' + (caps[idx] && caps[idx].sequence));
+    });
+
+    await test('B13 max-wait forces capture during continuous typing', async () => {
+      engine.clearAllCaptures(); // also exercises the clear API; sequence counters persist
+      const beforeSeq = seqWatermark(engine.getCapturesForEditor(rec.id) || []);
+      const typer = setInterval(() => { ta.value += 'k'; fire(ta, 'input'); }, 250);
+      await wait(6500);
+      clearInterval(typer);
+      await wait(1300);
+      const caps = engine.getCapturesForEditor(rec.id) || [];
+      const fresh = caps.filter(c => c.sequence > beforeSeq).length;
+      report('B13 max-wait forces capture during continuous typing', fresh >= 2, 'new captures=' + fresh + ' (need >=2: forced ~5s + final idle)');
+    });
+
+    await test('B15 dynamic editor captured via hook', async () => {
+      const dyn = document.createElement('textarea');
+      dyn.id = 'fx-dyn';
+      document.body.appendChild(dyn);
+      await wait(100);
+      const dynRec = editorRegistry.get(dyn);
+      dyn.value = 'dyn text';
+      fire(dyn, 'input');
+      await wait(1400);
+      const caps = dynRec ? (engine.getCapturesForEditor(dynRec.id) || []) : [];
+      report('B15 dynamic editor captured via hook', caps.length >= 1, 'count=' + caps.length);
+      dyn.remove();
+    });
+
+    const summary = document.createElement('div');
+    summary.style.fontWeight = 'bold';
+    summary.style.marginTop = '8px';
+    summary.textContent = passed + '/' + total + ' assertions passed' + (failed ? ' — ' + failed + ' FAILED' : '');
+    panel.appendChild(summary);
+    console.log('CAPTURE TESTS DONE: ' + passed + '/' + total);
+
+  })();
+})();
+</script>
+</body>
+</html>

@@ -44,7 +44,7 @@ const captureEngine = {
    * @param {Object} editorRecord - From editorRegistry
    */
   initEditorCapture: function(editorRecord) {
-    const { id: editorId, element, type: editorType } = editorRecord;
+    const { id: editorId } = editorRecord;
 
     // Prevent double-initialization
     if (initializedEditorIds.has(editorId)) {
@@ -72,10 +72,11 @@ const captureEngine = {
    * @param {Object} editorRecord - From editorRegistry
    */
   destroyEditorCapture: function(editorRecord) {
-    const { id: editorId, element } = editorRecord;
+    const { id: editorId } = editorRecord;
 
-    // Remove listeners
-    removeEditorListeners(editorId);
+    // Remove listeners (uses the record's own element — robust even if the
+    // element was already deregistered from editorRegistry)
+    removeEditorListeners(editorRecord);
 
     // Clear timeouts
     clearEditorTimeouts(editorId);
@@ -98,27 +99,27 @@ const captureEngine = {
   },
 
   /**
-   * Clear all captured data (for testing or privacy)
+   * Clear all captured data (for testing or privacy).
+   *
+   * Semantics: wipes captured DATA and pending timers, but keeps listeners
+   * attached and keeps editors initialized — capture continues seamlessly
+   * for future input. Sequence counters are preserved so per-editor
+   * sequences stay monotonic across wipes (recovery-ordering invariant).
    */
   clearAllCaptures: function() {
-    captureBuffer.clear();
-    captureSequence.clear();
-
-    // Clear all timeouts and listeners
-    for (const editorId of captureBuffer.keys()) {
-      removeEditorListeners(editorId);
+    // Clear pending timers FIRST so a pre-wipe snapshot cannot be re-saved
+    // after the wipe (the old version iterated captureBuffer.keys() AFTER
+    // clearing the buffer — a loop that could never run).
+    for (const editorId of Array.from(captureTimeouts.keys())) {
       clearEditorTimeouts(editorId);
     }
-
-    editorListeners.clear();
-    captureTimeouts.clear();
-    initializedEditorIds.clear();
+    captureBuffer.clear();
   }
 };
 
 // Private helper functions
 function setupEditorListeners(editorRecord) {
-  const { id: editorId, element, type: editorType } = editorRecord;
+  const { id: editorId, element } = editorRecord;
 
   // Define named handler functions for symmetric removal
   const inputHandler = () => handleEditorInput(editorRecord);
@@ -144,12 +145,11 @@ function setupEditorListeners(editorRecord) {
   window.addEventListener('pagehide', pagehideHandler);
 }
 
-function removeEditorListeners(editorId) {
-  const listeners = editorListeners.get(editorId);
+function removeEditorListeners(editorRecord) {
+  const listeners = editorListeners.get(editorRecord.id);
   if (!listeners) return;
 
-  // We need to get the element to remove listeners
-  const element = getElementFromRegistry(editorId);
+  const element = editorRecord.element;
   if (!element) return;
 
   element.removeEventListener('input', listeners.inputHandler);
@@ -158,16 +158,7 @@ function removeEditorListeners(editorId) {
   document.removeEventListener('visibilitychange', listeners.visibilityHandler);
   window.removeEventListener('pagehide', listeners.pagehideHandler);
 
-  editorListeners.delete(editorId);
-}
-
-function getElementFromRegistry(editorId) {
-  for (const [element, record] of editorRegistry.entries()) {
-    if (record.id === editorId) {
-      return element;
-    }
-  }
-  return null;
+  editorListeners.delete(editorRecord.id);
 }
 
 function handleEditorInput(editorRecord) {
@@ -200,15 +191,11 @@ function scheduleDebouncedCapture(editorRecord) {
     captureTimeouts.set(editorId, timeouts);
   }
 
-  // Idle capture: reset on every input event.
+  // Idle capture: reset on every input event. Timer hygiene inside
+  // performCapture also cancels the pending max-wait.
   if (timeouts.idleTimeout) clearTimeout(timeouts.idleTimeout);
   timeouts.idleTimeout = setTimeout(() => {
     performCapture(editorRecord);
-    // A capture just happened — stop the pending max-wait.
-    if (timeouts.maxWaitTimeout) {
-      clearTimeout(timeouts.maxWaitTimeout);
-      timeouts.maxWaitTimeout = null;
-    }
     timeouts.idleTimeout = null;
   }, CAPTURE_CONFIG.debounceMs);
 
@@ -217,7 +204,7 @@ function scheduleDebouncedCapture(editorRecord) {
   // (protects against sudden power loss, which fires no unload events).
   if (!timeouts.maxWaitTimeout) {
     timeouts.maxWaitTimeout = setTimeout(() => {
-      performCapture(editorRecord);
+      performCapture(editorRecord); // hygiene inside also cancels pending idle
       timeouts.maxWaitTimeout = null;
     }, CAPTURE_CONFIG.maxWaitMs);
   }
@@ -239,6 +226,21 @@ function clearEditorTimeouts(editorId) {
 
 function performCapture(editorRecord) {
   const { id: editorId, element, type: editorType } = editorRecord;
+
+  // TIMER HYGIENE (fixes duplicate captures): any capture — blur, visibility,
+  // pagehide, idle, or max-wait — cancels still-pending timers so no
+  // duplicate snapshot of the same content fires afterwards.
+  const pendingTimeouts = captureTimeouts.get(editorId);
+  if (pendingTimeouts) {
+    if (pendingTimeouts.idleTimeout) {
+      clearTimeout(pendingTimeouts.idleTimeout);
+      pendingTimeouts.idleTimeout = null;
+    }
+    if (pendingTimeouts.maxWaitTimeout) {
+      clearTimeout(pendingTimeouts.maxWaitTimeout);
+      pendingTimeouts.maxWaitTimeout = null;
+    }
+  }
 
   // Get the current text content based on editor type
   let textContent = '';
@@ -263,8 +265,13 @@ function performCapture(editorRecord) {
     editorType: editorType
   };
 
-  // Add to buffer for this editor
-  const buffer = captureBuffer.get(editorId) || [];
+  // Add to buffer for this editor (self-healing: recreate the buffer if it
+  // was cleared while capture remained live)
+  let buffer = captureBuffer.get(editorId);
+  if (!buffer) {
+    buffer = [];
+    captureBuffer.set(editorId, buffer);
+  }
   buffer.push(captureEntry);
 
   // Prune buffer if it exceeds maximum size
