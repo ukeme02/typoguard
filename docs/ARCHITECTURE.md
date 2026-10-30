@@ -12,7 +12,7 @@ Phase Component Status
 6 End-to-end recovery 🟢 COMPLETE
 7 Recovery banner / UI 🟢 COMPLETE
 8 SPA & dynamic-page hardening 🟢 COMPLETE
-9 Popup & history 🟡 IN PROGRESS
+9 Popup & history 🟢 COMPLETE
 10 Site exclusion & settings ⏳
 11 Security & privacy audit ⏳
 12 Compatibility testing ⏳
@@ -61,7 +61,7 @@ synchronized.
 🟢 Phase 5 — Storage Layer — COMPLETE (captures persisted to chrome.storage.local)
 🟢 Phase 6 — End-to-end Recovery — COMPLETE (popup UI + restore injection)
 🟢 Phase 8 — SPA & dynamic-page hardening — COMPLETE (permanent editor IDs, stable across DOM re-renders)
-🟡 Phase 9 — Popup & history — IN PROGRESS
+🟢 Phase 9 — Popup & history — COMPLETE (tabbed interface + history display + keyboard shortcut)
 
 ⏳ Remaining
 Phases 8–15
