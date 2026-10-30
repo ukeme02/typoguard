@@ -29,6 +29,9 @@ const editorRegistry = new Map();
 
 let nextEditorId = 1;
 
+// Map element -> permanent ID that survives DOM re-renders
+const permanentEditorIds = new Map();
+
 // Event listener system for editor registration/deregistration
 const editorEventListeners = {
   registered: [],
@@ -158,8 +161,19 @@ function registerEditor(element) {
     return null;
   }
 
+  // PERMANENT EDITOR ID — persists across DOM re-renders
+  // Uses a WeakMap-based tracking to reuse the same ID if the same
+  // logical editor is re-created by an SPA/framework
+  let permanentId = permanentEditorIds.get(element);
+  if (!permanentId) {
+    // Generate a permanent ID based on element attributes that survive re-render
+    const stableHash = `${element.tagName}-${element.id || ''}-${element.className || ''}`;
+    permanentId = `tg-perm-${btoa(stableHash).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
+    permanentEditorIds.set(element, permanentId);
+  }
+
   const record = {
-    id: "tg-editor-" + nextEditorId,
+    id: permanentId,
     element,
     type,
     registeredAt: Date.now()
