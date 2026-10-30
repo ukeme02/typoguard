@@ -152,6 +152,12 @@ function registerEditor(element) {
     return null;
   }
 
+  // SAFETY CHECK — block sensitive fields from being captured
+  if (window.typoGuardSafety && window.typoGuardSafety.isSensitiveField(element)) {
+    console.log(`TypoGuard: blocking sensitive field from capture: ${element.tagName.toLowerCase()}#${element.id || '(no id)'}`);
+    return null;
+  }
+
   const record = {
     id: "tg-editor-" + nextEditorId,
     element,
