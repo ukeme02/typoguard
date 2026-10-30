@@ -8,8 +8,8 @@ Phase Component Status
 2 Editor discovery 🟢 COMPLETE
 3 Capture engine 🟢 COMPLETE
 4 Safety / sensitive-field engine 🟢 COMPLETE
-5 Storage layer 🟡 IN PROGRESS
-6 End-to-end recovery ⏳
+5 Storage layer 🟢 COMPLETE
+6 End-to-end recovery 🟡 IN PROGRESS
 7 Recovery banner / UI ⏳
 8 SPA & dynamic-page hardening ⏳
 9 Popup & history ⏳
@@ -56,10 +56,13 @@ Phase 1 — Manifest & Extension Skeleton
 The repository is operational, Chrome accepts the extension, the content script executes, and GitHub is
 synchronized.
 🟢 Phase 2 — Editor Discovery — COMPLETE (verified via manual verification + discovery-tests.html)
-🟡 Phase 3 — Capture Engine — IN PROGRESS
+🟢 Phase 3 — Capture Engine — COMPLETE (verified via capture engine integration)
+🟢 Phase 4 — Safety / Sensitive-Field Engine — COMPLETE (sensitive fields blocked from capture)
+🟢 Phase 5 — Storage Layer — COMPLETE (captures persisted to chrome.storage.local)
+🟡 Phase 6 — End-to-end Recovery — IN PROGRESS
 
 ⏳ Remaining
-Phases 4–15
+Phases 7–15
 All remaining functionality is currently planned but not yet implemented.
 
 ## Deferred Items / Backlog
