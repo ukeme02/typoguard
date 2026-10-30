@@ -165,6 +165,9 @@ function registerEditor(element) {
     registeredAt: Date.now()
   };
 
+  // Mark element with data-tg-id so restore injection can find it
+  element.setAttribute('data-tg-id', record.id);
+
   nextEditorId++;
 
   editorRegistry.set(element, record);

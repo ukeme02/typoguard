@@ -9,8 +9,8 @@ Phase Component Status
 3 Capture engine 🟢 COMPLETE
 4 Safety / sensitive-field engine 🟢 COMPLETE
 5 Storage layer 🟢 COMPLETE
-6 End-to-end recovery 🟡 IN PROGRESS
-7 Recovery banner / UI ⏳
+6 End-to-end recovery 🟢 COMPLETE
+7 Recovery banner / UI 🟡 IN PROGRESS
 8 SPA & dynamic-page hardening ⏳
 9 Popup & history ⏳
 10 Site exclusion & settings ⏳
@@ -59,7 +59,8 @@ synchronized.
 🟢 Phase 3 — Capture Engine — COMPLETE (verified via capture engine integration)
 🟢 Phase 4 — Safety / Sensitive-Field Engine — COMPLETE (sensitive fields blocked from capture)
 🟢 Phase 5 — Storage Layer — COMPLETE (captures persisted to chrome.storage.local)
-🟡 Phase 6 — End-to-end Recovery — IN PROGRESS
+🟢 Phase 6 — End-to-end Recovery — COMPLETE (popup UI + restore injection)
+🟡 Phase 7 — Recovery Banner / UI — IN PROGRESS
 
 ⏳ Remaining
 Phases 7–15

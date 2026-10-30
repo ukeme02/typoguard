@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypoGuard — Recovery</title>
+    <style>
+        :root { --bg-body: #ffffff; --bg-card: #f8fafc; --text-main: #0f172a; --text-muted: #64748b; --border: #e2e8f0; --brand: #2563eb; --brand-hover: #1d4ed8; --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
+        [data-theme="dark"] { --bg-body: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --border: #334155; --brand: #3b82f6; --brand-hover: #60a5fa; --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-body); color: var(--text-main); width: 420px; min-height: 520px; transition: all 0.3s ease; }
+        .header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .logo { width: 24px; height: 24px; color: var(--brand); }
+        .stats { font-size: 11px; color: var(--text-muted); background: var(--bg-card); padding: 4px 8px; border-radius: 12px; border: 1px solid var(--border); }
+        .empty-state { padding: 40px 20px; text-align: center; color: var(--text-muted); }
+        .empty-state h3 { margin-bottom: 8px; color: var(--text-main); }
+        .editor-list { max-height: 400px; overflow-y: auto; }
+        .editor-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+        .editor-item:hover { background: var(--bg-card); }
+        .editor-item.active { background: #eff6ff; border-left: 3px solid var(--brand); }
+        [data-theme="dark"] .editor-item.active { background: #1e293b; }
+        .editor-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .editor-id { font-weight: 600; font-size: 14px; color: var(--text-main); }
+        .editor-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--bg-card); color: var(--brand); border: 1px solid var(--border); }
+        .editor-url { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; word-break: break-all; }
+        .captures-list { max-height: 200px; overflow-y: auto; margin-bottom: 8px; }
+        .capture-item { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; background: var(--bg-body); }
+        .capture-item:hover { border-color: var(--brand); }
+        .capture-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .capture-text { font-size: 12px; color: var(--text-main); white-space: pre-wrap; word-break: break-word; max-height: 60px; overflow: hidden; text-overflow: ellipsis; }
+        .capture-text.expanded { max-height: none; }
+        .btn-restore { width: 100%; padding: 8px 12px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+        .btn-restore:hover { background: var(--brand-hover); }
+        .btn-restore:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-clear { width: 100%; padding: 8px 12px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; margin-top: 6px; }
+        .btn-clear:hover { color: #dc2626; border-color: #dc2626; }
+        .no-captures { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">
+            <svg class="logo" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2 17l10 5 10-5" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2 12l10 5 10-5" />
+            </svg>
+            TypoGuard Recovery
+        </div>
+        <div id="stats" class="stats">0 editors · 0 captures</div>
+    </div>
+
+    <div class="empty-state" id="empty-state" style="display: none;">
+        <h3>No saved text yet</h3>
+        <p>Start typing in any editor and TypoGuard will save your work automatically.</p>
+    </div>
+
+    <div class="editor-list" id="editor-list"></div>
+
+    <div id="no-captures" class="no-captures" style="display: none;">
+        Select an editor to see captured text.
+    </div>
+
+    <button id="btn-clear-all" class="btn-clear">Clear All Data</button>
+
+    <script src="popup.js"></script>
+</body>
+</html>

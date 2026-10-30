@@ -283,6 +283,12 @@ function performCapture(editorRecord) {
   // Persist to storage layer (Phase 5)
   if (window.typoGuardStorage) {
     window.typoGuardStorage.saveCapturesForEditor(editorId, [captureEntry]);
+
+    // Save metadata for recovery UI
+    window.typoGuardStorage.saveMetadata(editorId, {
+      pageUrl: location.href,
+      editorType: editorType
+    });
   }
 
   // Log for debugging (can be removed in production)
