@@ -55,3 +55,20 @@ discoveryAPI.startEditorObserver();
 
 console.log("TypoGuard: editor observer started.");
 console.log("TypoGuard: registry size:", discoveryAPI.getEditorRegistrySize());
+
+// Phase 7: Check for text loss on page load
+// Load stored captures and check if any editor has lost text
+(async function checkForTextLoss() {
+  if (!window.typoGuardRecoveryBanner) {
+    console.warn("TypoGuard: recovery banner not available");
+    return;
+  }
+  try {
+    const result = await chrome.storage.local.get(['tg_captures']);
+    const allCaptures = result.tg_captures || {};
+    const records = Array.from(discoveryAPI.getEditorRegistry().values());
+    await window.typoGuardRecoveryBanner.checkTextLoss(records, allCaptures);
+  } catch (err) {
+    console.error("TypoGuard: text loss check failed:", err.message);
+  }
+})();

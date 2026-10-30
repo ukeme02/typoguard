@@ -10,8 +10,8 @@ Phase Component Status
 4 Safety / sensitive-field engine 🟢 COMPLETE
 5 Storage layer 🟢 COMPLETE
 6 End-to-end recovery 🟢 COMPLETE
-7 Recovery banner / UI 🟡 IN PROGRESS
-8 SPA & dynamic-page hardening ⏳
+7 Recovery banner / UI 🟢 COMPLETE
+8 SPA & dynamic-page hardening 🟡 IN PROGRESS
 9 Popup & history ⏳
 10 Site exclusion & settings ⏳
 11 Security & privacy audit ⏳
@@ -60,10 +60,11 @@ synchronized.
 🟢 Phase 4 — Safety / Sensitive-Field Engine — COMPLETE (sensitive fields blocked from capture)
 🟢 Phase 5 — Storage Layer — COMPLETE (captures persisted to chrome.storage.local)
 🟢 Phase 6 — End-to-end Recovery — COMPLETE (popup UI + restore injection)
-🟡 Phase 7 — Recovery Banner / UI — IN PROGRESS
+🟢 Phase 7 — Recovery Banner / UI — COMPLETE (inline banner + keyboard shortcut Ctrl+Shift+R)
+🟡 Phase 8 — SPA & dynamic-page hardening — IN PROGRESS
 
 ⏳ Remaining
-Phases 7–15
+Phases 8–15
 All remaining functionality is currently planned but not yet implemented.
 
 ## Deferred Items / Backlog
