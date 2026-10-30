@@ -333,3 +333,16 @@ function typoGuardDebug() {
     })
   };
 }
+
+// Expose registration event hooks globally so content.js can subscribe
+window.typoGuardEditorEvents = {
+  onEditorsChanged: onEditorsChanged
+};
+
+// Expose discovery API for content.js integration
+window.typoGuardDiscovery = {
+  registerAllEditors: registerAllEditors,
+  startEditorObserver: startEditorObserver,
+  getEditorRegistrySize: function () { return editorRegistry.size; },
+  getEditorRegistry: function () { return editorRegistry; }
+};

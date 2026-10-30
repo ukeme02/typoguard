@@ -5,8 +5,8 @@
 Phase Component Status
 0 Project setup & repository 🟢 COMPLETE
 1 Manifest & extension skeleton 🟢 COMPLETE
-2 Editor discovery 🟡 NEXT
-3 Capture engine ⏳
+2 Editor discovery 🟢 COMPLETE
+3 Capture engine 🟡 IN PROGRESS
 4 Safety / sensitive-field engine ⏳
 5 Storage layer ⏳
 6 End-to-end recovery ⏳
@@ -53,10 +53,11 @@ This rule should govern the entire TypoGuard development process.
 🟢 Completed
 Phase 0 — Project Setup & Repository
 Phase 1 — Manifest & Extension Skeleton
-25The repository is operational, Chrome accepts the extension, the content script executes, and GitHub is
+The repository is operational, Chrome accepts the extension, the content script executes, and GitHub is
 synchronized.
 🟢 Phase 2 — Editor Discovery — COMPLETE (verified via manual verification + discovery-tests.html)
-Phase 3 — Capture Engine — Next
+🟡 Phase 3 — Capture Engine — IN PROGRESS
+
 ⏳ Remaining
 Phases 4–15
 All remaining functionality is currently planned but not yet implemented.
@@ -67,3 +68,4 @@ All remaining functionality is currently planned but not yet implemented.
 - Stable editor IDs across DOM moves (Phase 3)
 
 ---
+
