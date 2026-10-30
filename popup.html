@@ -51,12 +51,47 @@
         <div id="stats" class="stats">0 editors · 0 captures</div>
     </div>
 
+    <div class="header">
+        <div class="title">
+            <svg class="logo" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2 17l10 5 10-5" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2 12l10 5 10-5" />
+            </svg>
+            TypoGuard Recovery
+        </div>
+        <div id="stats" class="stats">0 editors · 0 captures</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="editors">Editors</button>
+        <button class="tab-btn" data-tab="history">History</button>
+    </div>
+
     <div class="empty-state" id="empty-state" style="display: none;">
         <h3>No saved text yet</h3>
         <p>Start typing in any editor and TypoGuard will save your work automatically.</p>
     </div>
 
     <div class="editor-list" id="editor-list"></div>
+
+    <div id="no-captures" class="no-captures" style="display: none;">
+        Select an editor to see captured text.
+    </div>
+
+    <div id="history-list" class="history-list hidden">
+        <div class="p-6 rounded-xl theme-card border theme-border">
+            <h3 class="font-bold theme-text-main mb-4">Capture History</h3>
+            <p class="text-sm theme-text-muted mb-4">View your recovered text history across all editors and devices.</p>
+            <div class="space-y-3" id="history-items">
+                <!-- History items rendered by JS -->
+            </div>
+            <div class="mt-6">
+                <button id="btn-export" class="btn-restore w-full">Export History</button>
+                <button id="btn-clear-selected" class="btn-clear w-full mt-2">Clear Selected</button>
+            </div>
+        </div>
+    </div>
 
     <div id="no-captures" class="no-captures" style="display: none;">
         Select an editor to see captured text.
