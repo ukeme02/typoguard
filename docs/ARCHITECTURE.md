@@ -7,8 +7,8 @@ Phase Component Status
 1 Manifest & extension skeleton 🟢 COMPLETE
 2 Editor discovery 🟢 COMPLETE
 3 Capture engine 🟢 COMPLETE
-4 Safety / sensitive-field engine 🟡 IN PROGRESS
-5 Storage layer ⏳
+4 Safety / sensitive-field engine 🟢 COMPLETE
+5 Storage layer 🟡 IN PROGRESS
 6 End-to-end recovery ⏳
 7 Recovery banner / UI ⏳
 8 SPA & dynamic-page hardening ⏳

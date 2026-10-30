@@ -114,8 +114,11 @@ const captureEngine = {
       clearEditorTimeouts(editorId);
     }
     captureBuffer.clear();
-  }
-};
+
+    // Also clear persisted storage data (Phase 5)
+    if (window.typoGuardStorage) {
+      window.typoGuardStorage.clearAllData();
+    }
 
 // Private helper functions
 function setupEditorListeners(editorRecord) {
@@ -276,6 +279,11 @@ function performCapture(editorRecord) {
 
   // Prune buffer if it exceeds maximum size
   pruneCaptureBuffer(editorId);
+
+  // Persist to storage layer (Phase 5)
+  if (window.typoGuardStorage) {
+    window.typoGuardStorage.saveCapturesForEditor(editorId, [captureEntry]);
+  }
 
   // Log for debugging (can be removed in production)
   // console.log(`TypoGuard: captured ${textContent.length} chars for editor ${editorId}`);
