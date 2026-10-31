@@ -18,7 +18,7 @@
 | 7 | Recovery banner / UI | ✅ COMPLETE |
 | 8 | SPA & dynamic-page hardening | ✅ COMPLETE |
 | 9 | Popup & history | ✅ COMPLETE |
-| 10 | Site exclusion & settings | ⬜ NOT STARTED |
+| 10 | Site exclusion & settings | ✅ COMPLETE |
 | 11 | Security & privacy audit | ⬜ NOT STARTED |
 | 12 | Compatibility testing | ⬜ NOT STARTED |
 | 13 | Documentation | ⬜ NOT STARTED |
@@ -80,11 +80,19 @@ by `node --check` on all files, `scripts/check.sh`, and the automated
 `test/e2e-tests.html` harness (24/24 assertions, run in-browser over localhost).
 
 ### Immediate next task
-**Phase 10 — Site exclusion & settings**:
-- Settings storage under `tg_settings` (already reserved in storage.js).
-- Per-site exclusion list (never capture on excluded origins).
-- Popup settings tab (exclusion management + capture toggle).
-- Safety defaults: never capture on known banking/health domains.
+**Phase 11 — Security & privacy audit**:
+- Review every module against the Core Principles (local-only, no network).
+- Verify sensitive-field coverage (Phase 4 engine) against real-world forms.
+- Confirm no text content is logged in production console output.
+
+### Phase 10 — COMPLETE (2026-10-31)
+- `settings.js`: capture toggle, user exclusion list, protected-site defaults
+  (banking/health domains never captured, even pre-configuration). Cached for
+  synchronous checks; `ready()` promise for content.js init ordering.
+- `discovery.js` + `capture.js`: registration and capture gated on settings.
+- `content.js`: async init — settings load before the first registration.
+- Popup: Settings tab (capture toggle, exclusion add/remove, protected list).
+- Verified: `test/e2e-tests.html` section 8 (T8.1–T8.8) — full suite 32/32 PASS.
 
 ### Deferred Items / Backlog
 - Visibility edge-case filtering (revisit Phase 8)

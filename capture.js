@@ -247,6 +247,13 @@ function performCapture(editorRecord) {
     }
   }
 
+  // PHASE 10 — settings gate: no capture when globally disabled or when the
+  // site is excluded/protected. Placed after timer hygiene so pending
+  // debounced captures are cancelled rather than left to no-op later.
+  if (window.typoGuardSettings && !window.typoGuardSettings.isEnabledForSite()) {
+    return;
+  }
+
   // Get the current text content based on editor type
   let textContent = '';
 

@@ -47,6 +47,17 @@
         .history-text { font-size: 12px; color: var(--text-main); white-space: pre-wrap; word-break: break-word; max-height: 40px; overflow: hidden; }
         .history-actions { padding: 0 20px 16px; }
         .hidden { display: none; }
+        .settings-panel { padding: 12px 20px 16px; }
+        .setting-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 0; cursor: pointer; }
+        .setting-row input { width: 16px; height: 16px; accent-color: var(--brand); }
+        .setting-label { font-size: 11px; color: var(--text-muted); margin: 12px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+        .exclusion-add { display: flex; gap: 8px; margin-bottom: 10px; }
+        .exclusion-add input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-body); color: var(--text-main); font-size: 13px; }
+        .exclusion-add input:focus { outline: none; border-color: var(--brand); }
+        .exclusion-add button { width: auto; margin-top: 0; padding: 8px 16px; }
+        .exclusion-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+        .exclusion-remove { background: transparent; border: none; color: #dc2626; cursor: pointer; font-size: 12px; padding: 2px 6px; }
+        .protected-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -65,6 +76,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-tab="editors">Editors</button>
         <button class="tab-btn" data-tab="history">History</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
     </div>
 
     <div class="empty-state" id="empty-state" style="display: none;">
@@ -82,12 +94,28 @@
         <div id="history-items"></div>
     </div>
 
+    <div id="settings-panel" class="settings-panel hidden">
+        <label class="setting-row" for="setting-capture-enabled">
+            <input type="checkbox" id="setting-capture-enabled">
+            <span>Enable text capture</span>
+        </label>
+        <div class="setting-label">Excluded sites</div>
+        <div class="exclusion-add">
+            <input id="exclusion-input" type="text" placeholder="example.com">
+            <button id="btn-add-exclusion" class="btn-restore">Add</button>
+        </div>
+        <div id="exclusion-list"></div>
+        <div class="setting-label">Protected sites (always excluded)</div>
+        <div class="protected-note" id="protected-sites"></div>
+    </div>
+
     <div class="history-actions">
         <button id="btn-export" class="btn-restore hidden">Export History</button>
         <button id="btn-clear-selected" class="btn-clear hidden">Clear Selected Editor</button>
         <button id="btn-clear-all" class="btn-clear">Clear All Data</button>
     </div>
 
+    <script src="settings.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

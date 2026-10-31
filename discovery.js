@@ -168,6 +168,12 @@ function registerEditor(element) {
     return null;
   }
 
+  // PHASE 10 — respect capture settings: global toggle, user exclusions,
+  // and protected-site defaults
+  if (window.typoGuardSettings && !window.typoGuardSettings.isEnabledForSite()) {
+    return null;
+  }
+
   // PERMANENT EDITOR ID — persists across DOM re-renders
   // Uses a WeakMap-based tracking to reuse the same ID if the same
   // logical editor is re-created by an SPA/framework

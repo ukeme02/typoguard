@@ -22,6 +22,12 @@ const noCapturesEl = document.getElementById('no-captures');
 const btnExport = document.getElementById('btn-export');
 const btnClearSelected = document.getElementById('btn-clear-selected');
 const btnClearAll = document.getElementById('btn-clear-all');
+const settingsPanelEl = document.getElementById('settings-panel');
+const captureEnabledEl = document.getElementById('setting-capture-enabled');
+const exclusionInputEl = document.getElementById('exclusion-input');
+const exclusionListEl = document.getElementById('exclusion-list');
+const protectedSitesEl = document.getElementById('protected-sites');
+const historyActionsEl = document.querySelector('.history-actions');
 
 /** Escape arbitrary text for safe insertion via innerHTML. */
 function escapeHtml(text) {
@@ -55,18 +61,24 @@ function render() {
   statsEl.textContent = `${ids.length} editor${ids.length === 1 ? '' : 's'} · ${totalCaptures} capture${totalCaptures === 1 ? '' : 's'}`;
 
   const hasData = ids.length > 0;
-  emptyStateEl.style.display = hasData ? 'none' : 'block';
-  btnExport.classList.toggle('hidden', !hasData);
+  emptyStateEl.style.display = hasData || currentTab === 'settings' ? 'none' : 'block';
+  btnExport.classList.toggle('hidden', !hasData || currentTab === 'settings');
   btnClearSelected.classList.toggle('hidden', currentTab !== 'editors' || !selectedEditorId);
+  historyActionsEl.classList.toggle('hidden', currentTab === 'settings');
+  settingsPanelEl.classList.toggle('hidden', currentTab !== 'settings');
 
   if (currentTab === 'editors') {
     editorListEl.classList.toggle('hidden', !hasData);
     historyListEl.classList.add('hidden');
     renderEditors(ids);
-  } else {
+  } else if (currentTab === 'history') {
     editorListEl.classList.add('hidden');
     historyListEl.classList.toggle('hidden', !hasData);
     renderHistory(ids);
+  } else {
+    editorListEl.classList.add('hidden');
+    historyListEl.classList.add('hidden');
+    renderSettings();
   }
 }
 
@@ -149,6 +161,47 @@ async function restoreEditor(editorId) {
   );
 }
 
+/** Phase 10 — Settings tab (capture toggle + site exclusions). */
+function renderSettings() {
+  if (!window.typoGuardSettings) return;
+  const settings = window.typoGuardSettings.getSettings();
+  captureEnabledEl.checked = !!settings.captureEnabled;
+  exclusionListEl.innerHTML = settings.excludedSites.length === 0
+    ? '<div class="exclusion-item" style="color:var(--text-muted);">No excluded sites</div>'
+    : settings.excludedSites.map((site) => `
+        <div class="exclusion-item">
+          <span>${escapeHtml(site)}</span>
+          <button class="exclusion-remove" data-remove-site="${escapeHtml(site)}">Remove</button>
+        </div>`).join('');
+  protectedSitesEl.textContent = settings.protectedSites.join(', ');
+}
+
+function wireSettings() {
+  if (!window.typoGuardSettings) return;
+
+  captureEnabledEl.addEventListener('change', async () => {
+    await window.typoGuardSettings.updateSettings({ captureEnabled: captureEnabledEl.checked });
+  });
+
+  document.getElementById('btn-add-exclusion').addEventListener('click', async () => {
+    const site = exclusionInputEl.value.trim();
+    if (!site) return;
+    await window.typoGuardSettings.addExcludedSite(site);
+    exclusionInputEl.value = '';
+    renderSettings();
+  });
+  exclusionInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-add-exclusion').click();
+  });
+
+  exclusionListEl.addEventListener('click', async (event) => {
+    const btn = event.target.closest('[data-remove-site]');
+    if (!btn) return;
+    await window.typoGuardSettings.removeExcludedSite(btn.dataset.removeSite);
+    renderSettings();
+  });
+}
+
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => {
@@ -222,3 +275,4 @@ btnExport.addEventListener('click', exportHistory);
 
 // Init
 loadData().then(render);
+wireSettings();

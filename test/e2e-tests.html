@@ -25,11 +25,25 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="editors">Editors</button>
       <button class="tab-btn" data-tab="history">History</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
     </div>
     <div class="empty-state" id="empty-state" style="display: none;"><h3>No saved text yet</h3></div>
     <div class="editor-list" id="editor-list"></div>
     <div id="no-captures" class="no-captures" style="display: none;">Select an editor to see captured text.</div>
     <div id="history-list" class="history-list hidden"><div id="history-items"></div></div>
+    <div id="settings-panel" class="settings-panel hidden">
+      <label class="setting-row" for="setting-capture-enabled">
+        <input type="checkbox" id="setting-capture-enabled"><span>Enable text capture</span>
+      </label>
+      <div class="setting-label">Excluded sites</div>
+      <div class="exclusion-add">
+        <input id="exclusion-input" type="text" placeholder="example.com">
+        <button id="btn-add-exclusion" class="btn-restore">Add</button>
+      </div>
+      <div id="exclusion-list"></div>
+      <div class="setting-label">Protected sites (always excluded)</div>
+      <div class="protected-note" id="protected-sites"></div>
+    </div>
     <div class="history-actions">
       <button id="btn-export" class="btn-restore hidden">Export History</button>
       <button id="btn-clear-selected" class="btn-clear hidden">Clear Selected Editor</button>
@@ -74,7 +88,8 @@
     })();
   </script>
 
-  <!-- Content scripts in manifest.json order (recovery-banner BEFORE content.js) -->
+  <!-- Content scripts in manifest.json order (settings first, recovery-banner BEFORE content.js) -->
+  <script src="../settings.js"></script>
   <script src="../discovery.js"></script>
   <script src="../safety.js"></script>
   <script src="../capture.js"></script>
@@ -173,6 +188,7 @@
       }
 
       section('6. Popup (popup.js loaded after data exists)');
+      await sleep(1200); // let the restore-capture debounce flush before counting
       const popupScript = document.createElement('script');
       popupScript.src = '../popup.js';
       let popupLoadedOk = false;
@@ -215,6 +231,48 @@
         assert('T7.4 wrong passphrase fails cleanly (null)', wrong === null);
       } catch (err) {
         assert('T7 sync pipeline', false, err.message);
+      }
+
+      section('8. Phase 10 — Site exclusion & settings');
+      try {
+        assert('T8.1 settings module exposed with defaults', !!window.typoGuardSettings && window.typoGuardSettings.getSettings().captureEnabled === true);
+        assert('T8.2 protected sites blocked (chase.com + subdomain)', window.typoGuardSettings.isEnabledForSite('chase.com') === false && window.typoGuardSettings.isEnabledForSite('www.chase.com') === false);
+        assert('T8.3 normal sites allowed (example.com)', window.typoGuardSettings.isEnabledForSite('example.com') === true);
+
+        // exclude the current host → dynamically added editors must NOT register
+        await window.typoGuardSettings.addExcludedSite(location.hostname);
+        const sizeBefore = window.typoGuardDiscovery.getEditorRegistrySize();
+        const blocked = document.createElement('textarea');
+        blocked.id = 'fx-excluded-editor';
+        document.body.appendChild(blocked);
+        await sleep(250); // MutationObserver rescan
+        assert('T8.4 excluded site: new editor NOT registered', window.typoGuardDiscovery.getEditorRegistrySize() === sizeBefore);
+
+        // capture gate: typing produces no capture while excluded
+        blocked.value = 'should not be captured';
+        blocked.dispatchEvent(new Event('input', { bubbles: true }));
+        await sleep(1400);
+        const storedExcluded = await getStored();
+        const excludedCaps = Object.values(storedExcluded.tg_captures || {}).flat().filter((c) => c.text === 'should not be captured');
+        assert('T8.5 excluded site: no capture stored', excludedCaps.length === 0);
+
+        // remove exclusion → registration + capture resume
+        await window.typoGuardSettings.removeExcludedSite(location.hostname);
+        blocked.remove(); // detach the excluded fixture so it can't double-count on rescan
+        await sleep(150);
+        const unblocked = document.createElement('textarea');
+        unblocked.id = 'fx-allowed-editor';
+        document.body.appendChild(unblocked);
+        await sleep(250);
+        assert('T8.6 exclusion removed: new editor registered', window.typoGuardDiscovery.getEditorRegistrySize() === sizeBefore + 1, 'size=' + window.typoGuardDiscovery.getEditorRegistrySize() + ' expected ' + (sizeBefore + 1));
+
+        // popup Settings tab renders
+        document.querySelector('.tab-btn[data-tab="settings"]').click();
+        await sleep(100);
+        assert('T8.7 popup settings tab shows panel + protected list', !document.getElementById('settings-panel').classList.contains('hidden') && document.getElementById('protected-sites').textContent.includes('chase.com'));
+        assert('T8.8 popup capture toggle reflects settings', document.getElementById('setting-capture-enabled').checked === true);
+      } catch (err) {
+        assert('T8 settings pipeline', false, err.message);
       }
 
       const summary = document.createElement('div');

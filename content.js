@@ -33,28 +33,41 @@ if (!discoveryAPI) {
 // the 'registered' event for every editor present at startup; the
 // MutationObserver fires it for editors added later. initEditorCapture is
 // additionally idempotent (initializedEditorIds guard in capture.js).
-const unregisterRegistered = editorEvents.onEditorsChanged("registered", (editorRecord) => {
-  console.log(`TypoGuard: initializing capture for editor ${editorRecord.id}`);
-  if (captureAPI) captureAPI.initEditorCapture(editorRecord);
-});
+// Phase 10: initialization is async — settings load BEFORE the first
+// registration so exclusions, the capture toggle, and protected sites apply
+// from the very first editor.
+(async function initTypoGuard() {
+  if (window.typoGuardSettings) {
+    await window.typoGuardSettings.ready();
+    if (!window.typoGuardSettings.isEnabledForSite()) {
+      console.log("TypoGuard: capture disabled for this site — skipping editor registration.");
+      return;
+    }
+  }
 
-const unregisterDeregistered = editorEvents.onEditorsChanged("deregistered", (editorRecord) => {
-  console.log(`TypoGuard: destroying capture for editor ${editorRecord.id}`);
-  if (captureAPI) captureAPI.destroyEditorCapture(editorRecord);
-});
+  const unregisterRegistered = editorEvents.onEditorsChanged("registered", (editorRecord) => {
+    console.log(`TypoGuard: initializing capture for editor ${editorRecord.id}`);
+    if (captureAPI) captureAPI.initEditorCapture(editorRecord);
+  });
 
-// Discovery initialization — AFTER hook subscriptions, so no event fires early.
-const initialEditors = discoveryAPI.registerAllEditors();
+  const unregisterDeregistered = editorEvents.onEditorsChanged("deregistered", (editorRecord) => {
+    console.log(`TypoGuard: destroying capture for editor ${editorRecord.id}`);
+    if (captureAPI) captureAPI.destroyEditorCapture(editorRecord);
+  });
 
-console.log(
-  "TypoGuard: registry initialized:",
-  initialEditors.map(function (r) { return r.id + " (" + r.type + ")"; })
-);
+  // Discovery initialization — AFTER hook subscriptions, so no event fires early.
+  const initialEditors = discoveryAPI.registerAllEditors();
 
-discoveryAPI.startEditorObserver();
+  console.log(
+    "TypoGuard: registry initialized:",
+    initialEditors.map(function (r) { return r.id + " (" + r.type + ")"; })
+  );
 
-console.log("TypoGuard: editor observer started.");
-console.log("TypoGuard: registry size:", discoveryAPI.getEditorRegistrySize());
+  discoveryAPI.startEditorObserver();
+
+  console.log("TypoGuard: editor observer started.");
+  console.log("TypoGuard: registry size:", discoveryAPI.getEditorRegistrySize());
+})();
 
 // Phase 7: Check for text loss on page load
 // Load stored captures and check if any editor has lost text
