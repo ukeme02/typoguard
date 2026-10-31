@@ -51,12 +51,14 @@ async function saveCapturesForEditor(editorId, newCaptures) {
   // Merge new captures
   const merged = [...existing, ...newCaptures];
 
-  // Sort by timestamp descending (newest first)
-  merged.sort((a, b) => b.timestamp - a.timestamp);
+  // Sort by timestamp ascending (oldest first) so the LAST entry is always
+  // the latest — the recovery banner (checkTextLoss, triggerQuickRestore) and
+  // the popup both read captures[captures.length - 1] as the newest capture.
+  merged.sort((a, b) => a.timestamp - b.timestamp);
 
-  // Prune to max per editor
+  // Prune to max per editor — drop the OLDEST entries from the front
   if (merged.length > STORAGE_CONFIG.maxCapturesPerEditor) {
-    merged.length = STORAGE_CONFIG.maxCapturesPerEditor;
+    merged.splice(0, merged.length - STORAGE_CONFIG.maxCapturesPerEditor);
   }
 
   allCaptures[editorId] = merged;

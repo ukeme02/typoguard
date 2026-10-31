@@ -3,7 +3,7 @@
   "name": "TypoGuard",
   "version": "0.1.0",
   "description": "Privacy-first browser extension for recovering long-form text after accidental loss.",
-  "permissions": ["storage", "tabs", "syncHTML"],
+  "permissions": ["storage", "tabs"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "TypoGuard Recovery"
@@ -11,7 +11,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["discovery.js", "safety.js", "capture.js", "storage.js", "content.js", "recovery-banner.js", "sync.js", "importance.js"],
+      "js": ["discovery.js", "safety.js", "capture.js", "storage.js", "recovery-banner.js", "sync.js", "importance.js", "content.js"],
       "run_at": "document_idle"
     },
     {

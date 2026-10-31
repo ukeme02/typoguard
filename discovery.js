@@ -32,6 +32,13 @@ let nextEditorId = 1;
 // Map element -> permanent ID that survives DOM re-renders
 const permanentEditorIds = new Map();
 
+// Fingerprint -> issued permanent IDs. Two distinct editors can share the same
+// stable fingerprint (e.g. two bare <textarea> siblings), so a counter suffix
+// disambiguates them; without it, captures from editor A would be restored
+// into editor B and duplicated data-tg-id attributes would break lookups.
+const issuedPermanentIds = new Set();
+let permanentIdCounter = 0;
+
 // Event listener system for editor registration/deregistration
 const editorEventListeners = {
   registered: [],
@@ -168,7 +175,20 @@ function registerEditor(element) {
   if (!permanentId) {
     // Generate a permanent ID based on element attributes that survive re-render
     const stableHash = `${element.tagName}-${element.id || ''}-${element.className || ''}`;
-    permanentId = `tg-perm-${btoa(stableHash).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
+    // btoa throws on non-Latin1 characters (e.g. emoji in a className),
+    // so encode via UTF-8 bytes first.
+    const hashBytes = new TextEncoder().encode(stableHash);
+    let binary = '';
+    for (const byte of hashBytes) {
+      binary += String.fromCharCode(byte);
+    }
+    const hash = btoa(binary).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+    const baseId = `tg-perm-${hash || 'anon'}`;
+    permanentId = baseId;
+    if (issuedPermanentIds.has(baseId)) {
+      permanentId = `${baseId}-${++permanentIdCounter}`;
+    }
+    issuedPermanentIds.add(permanentId);
     permanentEditorIds.set(element, permanentId);
   }
 

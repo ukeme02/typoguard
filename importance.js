@@ -111,5 +111,3 @@ window.typoGuardImportance = {
   classifyImportance,
   extractFeatures,
 };
-
-export { scoreImportance, classifyImportance, extractFeatures };

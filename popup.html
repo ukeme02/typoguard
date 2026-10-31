@@ -13,6 +13,10 @@
         .title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         .logo { width: 24px; height: 24px; color: var(--brand); }
         .stats { font-size: 11px; color: var(--text-muted); background: var(--bg-card); padding: 4px 8px; border-radius: 12px; border: 1px solid var(--border); }
+        .tabs { display: flex; gap: 8px; padding: 12px 20px 0; }
+        .tab-btn { flex: 1; padding: 8px 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .tab-btn:hover { color: var(--brand); border-color: var(--brand); }
+        .tab-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
         .empty-state { padding: 40px 20px; text-align: center; color: var(--text-muted); }
         .empty-state h3 { margin-bottom: 8px; color: var(--text-main); }
         .editor-list { max-height: 400px; overflow-y: auto; }
@@ -36,21 +40,16 @@
         .btn-clear { width: 100%; padding: 8px 12px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; margin-top: 6px; }
         .btn-clear:hover { color: #dc2626; border-color: #dc2626; }
         .no-captures { padding: 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+        .history-list { padding: 12px 20px; max-height: 400px; overflow-y: auto; }
+        .history-item { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; }
+        .history-item:hover { border-color: var(--brand); }
+        .history-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .history-text { font-size: 12px; color: var(--text-main); white-space: pre-wrap; word-break: break-word; max-height: 40px; overflow: hidden; }
+        .history-actions { padding: 0 20px 16px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">
-            <svg class="logo" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2 17l10 5 10-5" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2 12l10 5 10-5" />
-            </svg>
-            TypoGuard Recovery
-        </div>
-        <div id="stats" class="stats">0 editors · 0 captures</div>
-    </div>
-
     <div class="header">
         <div class="title">
             <svg class="logo" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -80,24 +79,14 @@
     </div>
 
     <div id="history-list" class="history-list hidden">
-        <div class="p-6 rounded-xl theme-card border theme-border">
-            <h3 class="font-bold theme-text-main mb-4">Capture History</h3>
-            <p class="text-sm theme-text-muted mb-4">View your recovered text history across all editors and devices.</p>
-            <div class="space-y-3" id="history-items">
-                <!-- History items rendered by JS -->
-            </div>
-            <div class="mt-6">
-                <button id="btn-export" class="btn-restore w-full">Export History</button>
-                <button id="btn-clear-selected" class="btn-clear w-full mt-2">Clear Selected</button>
-            </div>
-        </div>
+        <div id="history-items"></div>
     </div>
 
-    <div id="no-captures" class="no-captures" style="display: none;">
-        Select an editor to see captured text.
+    <div class="history-actions">
+        <button id="btn-export" class="btn-restore hidden">Export History</button>
+        <button id="btn-clear-selected" class="btn-clear hidden">Clear Selected Editor</button>
+        <button id="btn-clear-all" class="btn-clear">Clear All Data</button>
     </div>
-
-    <button id="btn-clear-all" class="btn-clear">Clear All Data</button>
 
     <script src="popup.js"></script>
 </body>

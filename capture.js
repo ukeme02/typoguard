@@ -119,6 +119,8 @@ const captureEngine = {
     if (window.typoGuardStorage) {
       window.typoGuardStorage.clearAllData();
     }
+  }
+};
 
 // Private helper functions
 function setupEditorListeners(editorRecord) {
@@ -257,6 +259,13 @@ function performCapture(editorRecord) {
   // Apply character limit
   if (textContent.length > CAPTURE_CONFIG.maxCharsPerCapture) {
     textContent = textContent.substring(0, CAPTURE_CONFIG.maxCharsPerCapture);
+  }
+
+  // Skip empty captures. They would pollute storage (an initial capture fires
+  // for every editor on every page load) and break text-loss detection:
+  // a stored empty "latest" capture makes detectTextLoss always return false.
+  if (textContent.length === 0) {
+    return;
   }
 
   // Create capture entry
