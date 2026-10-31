@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "TypoGuard",
+  "version": "0.1.0",
+  "description": "Privacy-first text recovery for browser - mobile edition.",
+  "permissions": ["storage", "tabs"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["discovery.js", "safety.js", "capture.js", "storage.js", "content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup-mobile.html",
+    "default_title": "TypoGuard Recovery"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["recovery-banner.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "export": {
+    "filetypes": ["txt", "json"]
+  }
+}
