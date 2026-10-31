@@ -84,7 +84,7 @@ else
 fi
 
 echo "== 8. Required files =="
-for f in manifest.json content.js discovery.js capture.js test/discovery-tests.html test/capture-tests.html docs/ARCHITECTURE.md docs/PHASE3-CAPTURE-PLAN.md docs/PRODUCT-BACKLOG.md scripts/check.sh; do
+for f in manifest.json content.js discovery.js capture.js test/discovery-tests.html test/e2e-tests.html test/capture-tests.html docs/ARCHITECTURE.md docs/PHASE3-CAPTURE-PLAN.md docs/PRODUCT-BACKLOG.md scripts/check.sh; do
   [ -f "$f" ] && echo "OK   $f" || { echo "MISSING: $f"; FAIL=1; }
 done
 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>TypoGuard E2E Tests</title>
+  <style>
+    body { font-family: monospace; padding: 16px; background: #f8fafc; }
+    .pass { color: #16a34a; }
+    .fail { color: #dc2626; font-weight: bold; }
+    .section { margin-top: 16px; font-weight: bold; }
+    #popup-section { margin-top: 24px; border-top: 2px solid #334155; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <div id="test-results"></div>
+
+  <!-- Part A: content-script fixtures -->
+  <textarea id="fx-editor"></textarea>
+  <textarea id="fx-hidden" style="display:none"></textarea>
+  <textarea id="fx-password" name="password"></textarea>
+
+  <!-- Part B: popup fixtures (popup.js is loaded dynamically after data exists) -->
+  <div id="popup-section">
+    <div class="header"><div class="title">TypoGuard Recovery</div><div id="stats" class="stats">0 editors · 0 captures</div></div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="editors">Editors</button>
+      <button class="tab-btn" data-tab="history">History</button>
+    </div>
+    <div class="empty-state" id="empty-state" style="display: none;"><h3>No saved text yet</h3></div>
+    <div class="editor-list" id="editor-list"></div>
+    <div id="no-captures" class="no-captures" style="display: none;">Select an editor to see captured text.</div>
+    <div id="history-list" class="history-list hidden"><div id="history-items"></div></div>
+    <div class="history-actions">
+      <button id="btn-export" class="btn-restore hidden">Export History</button>
+      <button id="btn-clear-selected" class="btn-clear hidden">Clear Selected Editor</button>
+      <button id="btn-clear-all" class="btn-clear">Clear All Data</button>
+    </div>
+  </div>
+
+  <script>
+    // ---- chrome.* mock (in-memory chrome.storage.local) — must run FIRST ----
+    (function () {
+      const mem = new Map();
+      const listeners = [];
+      window.__tgSentMessages = [];
+      window.chrome = {
+        storage: {
+          local: {
+            get: async (keys) => {
+              const out = {};
+              const list = keys === null ? Array.from(mem.keys())
+                : typeof keys === 'string' ? [keys]
+                : Array.isArray(keys) ? keys : Object.keys(keys);
+              for (const k of list) {
+                if (mem.has(k)) out[k] = mem.get(k);
+                else if (keys && !Array.isArray(keys) && typeof keys === 'object') out[k] = keys[k];
+              }
+              return out;
+            },
+            set: async (obj) => { for (const [k, v] of Object.entries(obj)) mem.set(k, v); },
+            remove: async (keys) => { for (const k of [].concat(keys)) mem.delete(k); },
+            getBytesInUse: async () => JSON.stringify(Array.from(mem.entries())).length,
+            __mem: mem,
+          },
+        },
+        runtime: { onMessage: { addListener: () => {} }, lastError: null },
+        tabs: {
+          query: async () => [{ id: 1 }],
+          sendMessage: (tabId, msg, cb) => { window.__tgSentMessages.push(msg); if (cb) cb({ success: true }); },
+        },
+      };
+      window.__tgStorageMem = mem;
+      window.confirm = () => true;
+    })();
+  </script>
+
+  <!-- Content scripts in manifest.json order (recovery-banner BEFORE content.js) -->
+  <script src="../discovery.js"></script>
+  <script src="../safety.js"></script>
+  <script src="../capture.js"></script>
+  <script src="../storage.js"></script>
+  <script src="../recovery-banner.js"></script>
+  <script src="../sync.js"></script>
+  <script src="../importance.js"></script>
+  <script src="../content.js"></script>
+
+  <script>
+    const resultsDiv = document.getElementById('test-results');
+    let passed = 0, failed = 0;
+    function assert(name, condition, detail) {
+      const line = document.createElement('div');
+      line.textContent = `${name} … ${condition ? 'PASS' : 'FAIL' + (detail ? ' — ' + detail : '')}`;
+      line.className = condition ? 'pass' : 'fail';
+      resultsDiv.appendChild(line);
+      condition ? passed++ : failed++;
+    }
+    function section(name) {
+      const line = document.createElement('div');
+      line.className = 'section';
+      line.textContent = name;
+      resultsDiv.appendChild(line);
+    }
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    window.addEventListener('error', (e) => assert('RUNTIME ERROR: ' + (e.message || 'unknown'), false, (e.filename || '') + ':' + (e.lineno || '')));
+    window.addEventListener('unhandledrejection', (e) => assert('UNHANDLED REJECTION', false, String(e.reason)));
+    const mem = window.__tgStorageMem;
+    const editorEl = document.getElementById('fx-editor');
+
+    async function getStored() {
+      const r = await chrome.storage.local.get(['tg_captures', 'tg_metadata']);
+      return r;
+    }
+
+    function editorIdOf(el) {
+      const records = Array.from(window.typoGuardDiscovery.getEditorRegistry().values());
+      const rec = records.find((r) => r.element === el);
+      return rec ? rec.id : null;
+    }
+
+    async function runTests() {
+      await sleep(200); // let content.js init settle
+
+      section('1. Module pipeline (manifest order fix)');
+      assert('T1.1 capture engine exposed', !!window.typoGuardCaptureEngine);
+      assert('T1.2 storage layer exposed', !!window.typoGuardStorage);
+      assert('T1.3 recovery banner exposed (loaded before content.js)', !!window.typoGuardRecoveryBanner);
+      assert('T1.4 discovery exposed', !!window.typoGuardDiscovery);
+      assert('T1.5 sync exposed', !!window.typoGuardSync);
+      assert('T1.6 importance exposed', !!window.typoGuardImportance);
+
+      section('2. Editor discovery + safety filtering');
+      const registrySize = window.typoGuardDiscovery.getEditorRegistrySize();
+      assert('T2.1 visible editor registered, hidden + sensitive excluded', registrySize === 1, 'size=' + registrySize);
+      const fxId = editorIdOf(editorEl);
+      assert('T2.2 editor id is permanent-format', /^tg-perm-/.test(fxId || ''), fxId);
+
+      section('3. Empty-capture skip (init must not pollute storage)');
+      const stored0 = await getStored();
+      const capKeys0 = Object.keys(stored0.tg_captures || {}).filter((k) => (stored0.tg_captures[k] || []).length > 0);
+      assert('T3.1 no captures for empty editors at load', capKeys0.length === 0, JSON.stringify(capKeys0));
+
+      section('4. Capture → storage pipeline');
+      editorEl.value = 'hello TypoGuard';
+      editorEl.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(1400); // > debounceMs (1000)
+      let stored = await getStored();
+      const caps1 = (stored.tg_captures || {})[fxId] || [];
+      assert('T4.1 typed text captured to storage', caps1.some((c) => c.text === 'hello TypoGuard'), JSON.stringify(caps1.map((c) => c.text)));
+
+      editorEl.value = 'hello TypoGuard — second version, and this one is deliberately long, well past the one-hundred-character loss threshold that the Phase 7 banner detection requires to trigger';
+      editorEl.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(1400);
+      stored = await getStored();
+      const caps2 = stored.tg_captures[fxId];
+      assert('T4.2 captures chronological — LAST entry is latest', caps2.length === 2 && caps2[caps2.length - 1].text.includes('second version'), JSON.stringify(caps2.map((c) => c.text.slice(0, 20))));
+
+      section('5. Recovery banner: text-loss detection + restore');
+      editorEl.value = '';
+      editorEl.dispatchEvent(new Event('input', { bubbles: true })); // empty → must NOT overwrite latest capture
+      await sleep(60);
+      stored = await getStored();
+      assert('T5.1 clearing the field does not store an empty capture', stored.tg_captures[fxId].length === 2);
+      const records = Array.from(window.typoGuardDiscovery.getEditorRegistry().values());
+      await window.typoGuardRecoveryBanner.checkTextLoss(records, stored.tg_captures);
+      await sleep(100);
+      const banner = document.querySelector('.tg-recovery-banner');
+      assert('T5.2 banner appears after text loss', !!banner);
+      if (banner) {
+        banner.querySelector('#tg-btn-restore').click();
+        await sleep(100);
+        assert('T5.3 restore puts latest text back', editorEl.value.includes('second version'), editorEl.value);
+      }
+
+      section('6. Popup (popup.js loaded after data exists)');
+      const popupScript = document.createElement('script');
+      popupScript.src = '../popup.js';
+      let popupLoadedOk = false;
+      const popupLoaded = new Promise((r) => (popupScript.onload = () => { popupLoadedOk = true; r(); }));
+      popupScript.onerror = () => assert('popup.js failed to load', false);
+      document.body.appendChild(popupScript);
+      await Promise.race([popupLoaded, sleep(3000).then(() => { if (!popupLoadedOk) assert('popup.js load timeout', false); })]);
+      assert('T6.0 popup.js loaded dynamically', popupLoadedOk);
+      await sleep(200);
+      const stats = document.getElementById('stats').textContent;
+      // 3 captures: two typed + one auto-captured when the banner restore
+      // dispatched an input event (correct product behavior)
+      assert('T6.1 stats reflect stored data', /1 editor · 3 captures/.test(stats), stats);
+      const restoreBtn = document.querySelector('#editor-list [data-restore-id]');
+      assert('T6.2 editors tab shows restore button', !!restoreBtn);
+      if (restoreBtn) {
+        restoreBtn.click();
+        await sleep(150);
+        const sent = window.__tgSentMessages;
+        const last = sent[sent.length - 1] || {};
+        assert('T6.3 restore message sent with latest text', last.action === 'typoguard-restore' && last.text.includes('second version'), JSON.stringify(last).slice(0, 120));
+      }
+      document.querySelector('.tab-btn[data-tab="history"]').click();
+      await sleep(100);
+      const historyCount = document.querySelectorAll('#history-items .history-item').length;
+      assert('T6.4 history tab renders all captures', historyCount === 3, 'count=' + historyCount);
+      assert('T6.5 export button visible with data', !document.getElementById('btn-export').classList.contains('hidden'));
+
+      section('7. Encrypted sync (AES-GCM + PBKDF2 fixes)');
+      try {
+        await window.typoGuardSync.saveSyncState({ a: 1 }, 'test-passphrase');
+        const raw1 = mem.get('tg_sync_state');
+        assert('T7.1 encrypted save stores iv/ciphertext/salt', !!(raw1 && raw1.iv && raw1.ciphertext && raw1.salt), JSON.stringify(raw1).slice(0, 80));
+        const loaded = await window.typoGuardSync.loadSyncState('test-passphrase');
+        assert('T7.2 roundtrip decrypts correctly', !!loaded && loaded.a === 1, JSON.stringify(loaded));
+        await window.typoGuardSync.saveSyncState({ a: 2 }, 'test-passphrase');
+        const raw2 = mem.get('tg_sync_state');
+        assert('T7.3 salt is REUSED across saves (old states stay decryptable)', raw2.salt === raw1.salt);
+        const wrong = await window.typoGuardSync.loadSyncState('wrong-passphrase');
+        assert('T7.4 wrong passphrase fails cleanly (null)', wrong === null);
+      } catch (err) {
+        assert('T7 sync pipeline', false, err.message);
+      }
+
+      const summary = document.createElement('div');
+      summary.className = 'section';
+      summary.textContent = `RESULT: ${passed} passed, ${failed} failed`;
+      summary.style.color = failed === 0 ? '#16a34a' : '#dc2626';
+      resultsDiv.appendChild(summary);
+    }
+
+    runTests();
+  </script>
+</body>
+</html>
